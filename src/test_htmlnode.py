@@ -57,6 +57,13 @@ class TestHTMLNode(unittest.TestCase):
         with self.assertRaises(ValueError):
             node.to_html()
 
+    def test_leaf_to_html_empty_string_value_allowed(self):
+        node = LeafNode("img", "", {"src": "https://x.com/a.png", "alt": "pic"})
+        self.assertEqual(
+            node.to_html(),
+            '<img src="https://x.com/a.png" alt="pic"></img>',
+        )
+
     def test_to_html_with_children(self):
         child_node = LeafNode("span", "child")
         parent_node = ParentNode("div", [child_node])

@@ -7,6 +7,7 @@ from inline_markdown import (
     extract_markdown_links,
     split_nodes_image,
     split_nodes_link,
+    text_to_textnodes,
 )
 
 
@@ -521,6 +522,124 @@ class TestSplitNodesLink(unittest.TestCase):
             ],
             result,
         )
+
+
+class TestTextToTextNodes(unittest.TestCase):
+    def test_full_example(self):
+        text = (
+            "This is **text** with an _italic_ word and a `code block` "
+            "and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) "
+            "and a [link](https://boot.dev)"
+        )
+        self.assertListEqual(
+            [
+                TextNode("This is ", TextType.TEXT),
+                TextNode("text", TextType.BOLD),
+                TextNode(" with an ", TextType.TEXT),
+                TextNode("italic", TextType.ITALIC),
+                TextNode(" word and a ", TextType.TEXT),
+                TextNode("code block", TextType.CODE),
+                TextNode(" and an ", TextType.TEXT),
+                TextNode(
+                    "obi wan image",
+                    TextType.IMAGE,
+                    "https://i.imgur.com/fJRm4Vk.jpeg",
+                ),
+                TextNode(" and a ", TextType.TEXT),
+                TextNode("link", TextType.LINK, "https://boot.dev"),
+            ],
+            text_to_textnodes(text),
+        )
+
+    def test_plain_text_only(self):
+        self.assertListEqual(
+            [TextNode("just plain text", TextType.TEXT)],
+            text_to_textnodes("just plain text"),
+        )
+
+    def test_only_bold(self):
+        self.assertListEqual(
+            [TextNode("bold", TextType.BOLD)],
+            text_to_textnodes("**bold**"),
+        )
+
+    def test_only_italic(self):
+        self.assertListEqual(
+            [TextNode("italic", TextType.ITALIC)],
+            text_to_textnodes("_italic_"),
+        )
+
+    def test_only_code(self):
+        self.assertListEqual(
+            [TextNode("snippet", TextType.CODE)],
+            text_to_textnodes("`snippet`"),
+        )
+
+    def test_only_image(self):
+        self.assertListEqual(
+            [TextNode("alt", TextType.IMAGE, "https://x.com/a.png")],
+            text_to_textnodes("![alt](https://x.com/a.png)"),
+        )
+
+    def test_only_link(self):
+        self.assertListEqual(
+            [TextNode("click", TextType.LINK, "https://example.com")],
+            text_to_textnodes("[click](https://example.com)"),
+        )
+
+    def test_bold_and_italic_only(self):
+        self.assertListEqual(
+            [
+                TextNode("bold", TextType.BOLD),
+                TextNode(" and ", TextType.TEXT),
+                TextNode("italic", TextType.ITALIC),
+            ],
+            text_to_textnodes("**bold** and _italic_"),
+        )
+
+    def test_image_then_link(self):
+        text = "![pic](https://x.com/a.png) and [click](https://www.boot.dev)"
+        self.assertListEqual(
+            [
+                TextNode("pic", TextType.IMAGE, "https://x.com/a.png"),
+                TextNode(" and ", TextType.TEXT),
+                TextNode("click", TextType.LINK, "https://www.boot.dev"),
+            ],
+            text_to_textnodes(text),
+        )
+
+    def test_link_then_image(self):
+        text = "[click](https://www.boot.dev) before ![pic](https://x.com/a.png)"
+        self.assertListEqual(
+            [
+                TextNode("click", TextType.LINK, "https://www.boot.dev"),
+                TextNode(" before ", TextType.TEXT),
+                TextNode("pic", TextType.IMAGE, "https://x.com/a.png"),
+            ],
+            text_to_textnodes(text),
+        )
+
+    def test_multiple_of_each_inline_type(self):
+        text = "**a** and **b** with _x_ and _y_"
+        self.assertListEqual(
+            [
+                TextNode("a", TextType.BOLD),
+                TextNode(" and ", TextType.TEXT),
+                TextNode("b", TextType.BOLD),
+                TextNode(" with ", TextType.TEXT),
+                TextNode("x", TextType.ITALIC),
+                TextNode(" and ", TextType.TEXT),
+                TextNode("y", TextType.ITALIC),
+            ],
+            text_to_textnodes(text),
+        )
+
+    def test_empty_string(self):
+        self.assertListEqual([], text_to_textnodes(""))
+
+    def test_unclosed_delimiter_raises(self):
+        with self.assertRaises(ValueError):
+            text_to_textnodes("opens **but never closes")
 
 
 if __name__ == "__main__":
