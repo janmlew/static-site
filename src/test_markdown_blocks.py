@@ -5,6 +5,7 @@ from markdown_blocks import (
     block_to_block_type,
     BlockType,
     markdown_to_html_node,
+    extract_title,
 )
 
 
@@ -367,6 +368,48 @@ code stays raw
             "<pre><code>code stays raw\n</code></pre>"
             "</div>",
         )
+
+
+class TestExtractTitle(unittest.TestCase):
+    def test_basic(self):
+        self.assertEqual(extract_title("# Hello"), "Hello")
+
+    def test_strips_trailing_whitespace(self):
+        self.assertEqual(extract_title("# Hello   "), "Hello")
+
+    def test_strips_inner_padding(self):
+        self.assertEqual(extract_title("#    Spacy   "), "Spacy")
+
+    def test_h1_in_full_document(self):
+        md = "Some intro paragraph.\n\n# The Title\n\nMore text."
+        self.assertEqual(extract_title(md), "The Title")
+
+    def test_h1_with_inline_markdown_kept_literal(self):
+        self.assertEqual(extract_title("# Hello **world**"), "Hello **world**")
+
+    def test_first_h1_when_multiple(self):
+        md = "# First\n\nbody\n\n# Second"
+        self.assertEqual(extract_title(md), "First")
+
+    def test_no_h1_raises(self):
+        with self.assertRaises(Exception):
+            extract_title("Just a paragraph with no heading")
+
+    def test_only_h2_raises(self):
+        with self.assertRaises(Exception):
+            extract_title("## Not an h1")
+
+    def test_only_h6_raises(self):
+        with self.assertRaises(Exception):
+            extract_title("###### Not an h1")
+
+    def test_empty_string_raises(self):
+        with self.assertRaises(Exception):
+            extract_title("")
+
+    def test_hash_without_space_raises(self):
+        with self.assertRaises(Exception):
+            extract_title("#NoSpace")
 
 
 if __name__ == "__main__":
